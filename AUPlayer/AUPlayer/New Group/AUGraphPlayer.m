@@ -110,7 +110,7 @@
     //4-2:获取出PlayerNode的AudioUnit
     status = AUGraphNodeInfo(mPlayerGraph, mPlayerNode, NULL, &mPlayerUnit);
     CheckStatus(status, @"Could not retrieve node info for Player node", YES);
-    //4-3:获取出PlayerNode的AudioUnit
+    //4-3:获取出SplitterNode的AudioUnit
     status = AUGraphNodeInfo(mPlayerGraph, mSplitterNode, NULL, &mSplitterUnit);
     CheckStatus(status, @"Could not retrieve node info for Splitter node", YES);
     //4-4:获取出VocalMixer的AudioUnit
@@ -124,18 +124,28 @@
     AudioStreamBasicDescription stereoStreamFormat;
     UInt32 bytesPerSample = sizeof(Float32);
     bzero(&stereoStreamFormat, sizeof(stereoStreamFormat));
-    stereoStreamFormat.mFormatID          = kAudioFormatLinearPCM;
-    stereoStreamFormat.mFormatFlags       = kAudioFormatFlagsNativeFloatPacked | kAudioFormatFlagIsNonInterleaved;
-    stereoStreamFormat.mBytesPerPacket    = bytesPerSample;
+    stereoStreamFormat.mFormatID          = kAudioFormatLinearPCM;//指定音频格式
+    //mFormatFlagsa表示格式：FloatPacked表示格式是float
+    //NonInterleaved表示音频存储的的AudioBufferList中的mBuffer[0]是左声道 mBuffer[1]是又声道 非交错存放
+    //如果使用Interleaved 左右声道数据交错存放在mBuffer[0]中
+    stereoStreamFormat.mFormatFlags       = kAudioFormatFlagsNativeFloatPacked | kAudioFormatFlagIsNonInterleaved;//
     stereoStreamFormat.mFramesPerPacket   = 1;
     stereoStreamFormat.mBytesPerFrame     = bytesPerSample;
     stereoStreamFormat.mChannelsPerFrame  = 2;                    // 2 indicates stereo
-    stereoStreamFormat.mBitsPerChannel    = 8 * bytesPerSample;
+    //mBitsPerChannel和mBytesPerPacket的赋值 需要看mFormatFlags 如果是NonInterleaved 就赋值 bytesPerSample
+    //如果是Interleaved 则需要bytesPerSample * Channels
+    stereoStreamFormat.mBitsPerChannel    = 8 * bytesPerSample;//一个声道的音频数据用多少位来表示 float类型
+    stereoStreamFormat.mBytesPerPacket    = bytesPerSample;
     stereoStreamFormat.mSampleRate        = 48000.0;
-    status = AudioUnitSetProperty(mPlayerIOUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output, 1, &stereoStreamFormat, sizeof(stereoStreamFormat));
+    
+    status = AudioUnitSetProperty(mPlayerIOUnit,
+                                  kAudioUnitProperty_StreamFormat,
+                                  kAudioUnitScope_Output,
+                                  1,
+                                  &stereoStreamFormat,
+                                  sizeof(stereoStreamFormat));
     CheckStatus(status, @"set remote IO output element stream format ", YES);
-    status = AudioUnitSetProperty(
-                                  mPlayerUnit,
+    status = AudioUnitSetProperty(mPlayerUnit,
                                   kAudioUnitProperty_StreamFormat,
                                   kAudioUnitScope_Output,
                                   0,
@@ -145,32 +155,64 @@
     CheckStatus(status, @"Could not Set StreamFormat for Player Unit", YES);
     
     //5-2配置Splitter的属性
-    status = AudioUnitSetProperty(mSplitterUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output,
-                                  0, &stereoStreamFormat, sizeof(stereoStreamFormat));
+    status = AudioUnitSetProperty(mSplitterUnit,
+                                  kAudioUnitProperty_StreamFormat,
+                                  kAudioUnitScope_Output,
+                                  0,
+                                  &stereoStreamFormat,
+                                  sizeof(stereoStreamFormat));
     CheckStatus(status, @"Could not Set StreamFormat for Splitter Unit", YES);
-    status = AudioUnitSetProperty(mSplitterUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input,
-                                  0, &stereoStreamFormat, sizeof(stereoStreamFormat));
+    status = AudioUnitSetProperty(mSplitterUnit,
+                                  kAudioUnitProperty_StreamFormat,
+                                  kAudioUnitScope_Input,
+                                  0,
+                                  &stereoStreamFormat,
+                                  sizeof(stereoStreamFormat));
     CheckStatus(status, @"Could not Set StreamFormat for Splitter Unit", YES);
     //5-3 配置VocalMixerUnit的属性
-    status = AudioUnitSetProperty(mVocalMixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output,
-                                  0, &stereoStreamFormat, sizeof(stereoStreamFormat));
+    status = AudioUnitSetProperty(mVocalMixerUnit,
+                                  kAudioUnitProperty_StreamFormat,
+                                  kAudioUnitScope_Output,
+                                  0,
+                                  &stereoStreamFormat,
+                                  sizeof(stereoStreamFormat));
     CheckStatus(status, @"Could not Set StreamFormat for VocalMixer Unit", YES);
-    status = AudioUnitSetProperty(mVocalMixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input,
-                                  0, &stereoStreamFormat, sizeof(stereoStreamFormat));
+    status = AudioUnitSetProperty(mVocalMixerUnit,
+                                  kAudioUnitProperty_StreamFormat,
+                                  kAudioUnitScope_Input,
+                                  0,
+                                  &stereoStreamFormat,
+                                  sizeof(stereoStreamFormat));
     CheckStatus(status, @"Could not Set StreamFormat for VocalMixer Unit", YES);
     int mixerElementCount = 1;
-    status = AudioUnitSetProperty(mVocalMixerUnit, kAudioUnitProperty_ElementCount, kAudioUnitScope_Input, 0,
-                                  &mixerElementCount, sizeof(mixerElementCount));
+    status = AudioUnitSetProperty(mVocalMixerUnit,
+                                  kAudioUnitProperty_ElementCount,
+                                  kAudioUnitScope_Input,
+                                  0,
+                                  &mixerElementCount,
+                                  sizeof(mixerElementCount));
     //5-4 配置AccMixerUnit的属性
-    status = AudioUnitSetProperty(mAccMixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Output,
-                                  0, &stereoStreamFormat, sizeof(stereoStreamFormat));
+    status = AudioUnitSetProperty(mAccMixerUnit,
+                                  kAudioUnitProperty_StreamFormat,
+                                  kAudioUnitScope_Output,
+                                  0,
+                                  &stereoStreamFormat,
+                                  sizeof(stereoStreamFormat));
     CheckStatus(status, @"Could not Set StreamFormat for AccMixer Unit", YES);
-    status = AudioUnitSetProperty(mAccMixerUnit, kAudioUnitProperty_StreamFormat, kAudioUnitScope_Input,
-                                  0, &stereoStreamFormat, sizeof(stereoStreamFormat));
+    status = AudioUnitSetProperty(mAccMixerUnit,
+                                  kAudioUnitProperty_StreamFormat,
+                                  kAudioUnitScope_Input,
+                                  0,
+                                  &stereoStreamFormat,
+                                  sizeof(stereoStreamFormat));
     CheckStatus(status, @"Could not Set StreamFormat for AccMixer Unit", YES);
     mixerElementCount = 2;
-    status = AudioUnitSetProperty(mAccMixerUnit, kAudioUnitProperty_ElementCount, kAudioUnitScope_Input, 0,
-                                  &mixerElementCount, sizeof(mixerElementCount));
+    status = AudioUnitSetProperty(mAccMixerUnit,
+                                  kAudioUnitProperty_ElementCount,
+                                  kAudioUnitScope_Input,
+                                  0,
+                                  &mixerElementCount,
+                                  sizeof(mixerElementCount));
     
     [self setInputSource:NO];
     //6:连接起Node来
@@ -198,25 +240,57 @@
 - (void)setInputSource:(BOOL)isAcc{
     OSStatus status;
     AudioUnitParameterValue value;
-    status = AudioUnitGetParameter(mVocalMixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, &value);
+    status = AudioUnitGetParameter(mVocalMixerUnit,
+                                   kMultiChannelMixerParam_Volume,
+                                   kAudioUnitScope_Input,
+                                   0,
+                                   &value);
     CheckStatus(status, @"get parameter fail", YES);
     NSLog(@"Vocal Mixer %lf", value);
-    status = AudioUnitGetParameter(mAccMixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, &value);
+    status = AudioUnitGetParameter(mAccMixerUnit,
+                                   kMultiChannelMixerParam_Volume,
+                                   kAudioUnitScope_Input,
+                                   0,
+                                   &value);
     CheckStatus(status, @"get parameter fail", YES);
     NSLog(@"Acc Mixer 0 %lf", value);
-    status = AudioUnitGetParameter(mAccMixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 1, &value);
+    status = AudioUnitGetParameter(mAccMixerUnit,
+                                   kMultiChannelMixerParam_Volume,
+                                   kAudioUnitScope_Input,
+                                   1,
+                                   &value);
     CheckStatus(status, @"get parameter fail", YES);
     NSLog(@"Acc Mixer 1 %lf", value);
     
     if(isAcc) {
-        status = AudioUnitSetParameter(mAccMixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, 0.1, 0);
+        status = AudioUnitSetParameter(mAccMixerUnit,
+                                       kMultiChannelMixerParam_Volume,
+                                       kAudioUnitScope_Input,
+                                       0,
+                                       0.1,
+                                       0);
         CheckStatus(status, @"set parameter fail", YES);
-        status = AudioUnitSetParameter(mAccMixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 1, 1, 0);
+        status = AudioUnitSetParameter(mAccMixerUnit,
+                                       kMultiChannelMixerParam_Volume,
+                                       kAudioUnitScope_Input,
+                                       1,
+                                       1,
+                                       0);
         CheckStatus(status, @"set parameter fail", YES);
     } else {
-        status = AudioUnitSetParameter(mAccMixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 0, 1, 0);
+        status = AudioUnitSetParameter(mAccMixerUnit,
+                                       kMultiChannelMixerParam_Volume,
+                                       kAudioUnitScope_Input,
+                                       0,
+                                       1,
+                                       0);
         CheckStatus(status, @"set parameter fail", YES);
-        status = AudioUnitSetParameter(mAccMixerUnit, kMultiChannelMixerParam_Volume, kAudioUnitScope_Input, 1, 0.1, 0);
+        status = AudioUnitSetParameter(mAccMixerUnit,
+                                       kMultiChannelMixerParam_Volume,
+                                       kAudioUnitScope_Input,
+                                       1,
+                                       0.1,
+                                       0);
         CheckStatus(status, @"set parameter fail", YES);
     }
     
@@ -232,8 +306,12 @@
     
     
     // tell the file player unit to load the file we want to play
-    status = AudioUnitSetProperty(mPlayerUnit, kAudioUnitProperty_ScheduledFileIDs,
-                                  kAudioUnitScope_Global, 0, &musicFile, sizeof(musicFile));
+    status = AudioUnitSetProperty(mPlayerUnit,
+                                  kAudioUnitProperty_ScheduledFileIDs,
+                                  kAudioUnitScope_Global,
+                                  0,
+                                  &musicFile,
+                                  sizeof(musicFile));
     CheckStatus(status, @"Tell AudioFile Player Unit Load Which File... ", YES);
     
     
@@ -241,8 +319,10 @@
     AudioStreamBasicDescription fileASBD;
     // get the audio data format from the file
     UInt32 propSize = sizeof(fileASBD);
-    status = AudioFileGetProperty(musicFile, kAudioFilePropertyDataFormat,
-                                  &propSize, &fileASBD);
+    status = AudioFileGetProperty(musicFile,
+                                  kAudioFilePropertyDataFormat,
+                                  &propSize,
+                                  &fileASBD);
     CheckStatus(status, @"get the audio data format from the file... ", YES);
     UInt64 nPackets;
     UInt32 propsize = sizeof(nPackets);
@@ -259,15 +339,23 @@
     rgn.mLoopCount = 0;
     rgn.mStartFrame = 0;
     rgn.mFramesToPlay = (UInt32)nPackets * fileASBD.mFramesPerPacket;
-    status = AudioUnitSetProperty(mPlayerUnit, kAudioUnitProperty_ScheduledFileRegion,
-                                  kAudioUnitScope_Global, 0,&rgn, sizeof(rgn));
+    status = AudioUnitSetProperty(mPlayerUnit,
+                                  kAudioUnitProperty_ScheduledFileRegion,
+                                  kAudioUnitScope_Global,
+                                  0,
+                                  &rgn,
+                                  sizeof(rgn));
     CheckStatus(status, @"Set Region... ", YES);
     
     
     // prime the file player AU with default values
     UInt32 defaultVal = 0;
-    status = AudioUnitSetProperty(mPlayerUnit, kAudioUnitProperty_ScheduledFilePrime,
-                                  kAudioUnitScope_Global, 0, &defaultVal, sizeof(defaultVal));
+    status = AudioUnitSetProperty(mPlayerUnit,
+                                  kAudioUnitProperty_ScheduledFilePrime,
+                                  kAudioUnitScope_Global,
+                                  0,
+                                  &defaultVal,
+                                  sizeof(defaultVal));
     CheckStatus(status, @"Prime Player Unit With Default Value... ", YES);
     
     
@@ -276,8 +364,12 @@
     memset (&startTime, 0, sizeof(startTime));
     startTime.mFlags = kAudioTimeStampSampleTimeValid;
     startTime.mSampleTime = -1;
-    status = AudioUnitSetProperty(mPlayerUnit, kAudioUnitProperty_ScheduleStartTimeStamp,
-                                  kAudioUnitScope_Global, 0, &startTime, sizeof(startTime));
+    status = AudioUnitSetProperty(mPlayerUnit,
+                                  kAudioUnitProperty_ScheduleStartTimeStamp,
+                                  kAudioUnitScope_Global,
+                                  0,
+                                  &startTime,
+                                  sizeof(startTime));
     CheckStatus(status, @"set Player Unit Start Time... ", YES);
     
 }
